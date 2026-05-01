@@ -25,7 +25,7 @@ export function KycLauncher({ currentStatus, customerType, companyName, siret }:
     setPending(true);
     const result = await startKycAction();
     if (result.success) {
-      window.location.href = result.url;
+      window.location.assign(result.url);
       return;
     }
     setPending(false);
