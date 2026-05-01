@@ -14,7 +14,9 @@ datasource db {
 // =====================================================================
 
 model User {
-  id                String          @id @default(cuid())
+  // Matches auth.users.id from Supabase Auth (UUID string).
+  // The User row is created/updated server-side after auth events.
+  id                String          @id
   email             String          @unique
   phone             String?
   firstName         String?

@@ -6,6 +6,30 @@ Le format est inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0
 
 ## [Unreleased]
 
+### Phase 1 — Auth + KYC
+
+#### Added
+
+- Supabase Auth flows: signup, login, logout, password reset (server actions, French UI)
+- Email confirmation callback (`/auth/confirm`) that verifies the OTP and creates the `User` row idempotently
+- Next.js `proxy.ts` (formerly `middleware.ts` in Next 15) for session refresh + route protection on `/profil`, `/mes-locations`, `/factures`, `/kyc`, `/admin`
+- Auth helpers: `getCurrentUser`, `requireUser`, `ensureDbUser`
+- Profile page (`/profil`) with editable fields and PRO conditional fields (companyName, SIRET)
+- KYC flow via Stripe Identity:
+  - `/kyc` page that creates a hosted VerificationSession and redirects
+  - `/kyc/retour` post-verification status display
+  - `lib/stripe/identity.ts` + `lib/stripe/customer.ts` (idempotent customer creation)
+- Stripe webhook handler at `/api/webhooks/stripe` with signature verification + handlers for `identity.verification_session.{verified, requires_input, canceled}`
+- shadcn components: input, label, card, alert, separator, sonner
+- react-hook-form + @hookform/resolvers integration
+- Zod schemas for signup / login / password reset / profile + 17 new unit tests (44 total)
+- CI workflow: added a production build step with placeholder envs to catch build-breaking changes
+
+#### Changed
+
+- Schema: `User.id` now stores Supabase `auth.users.id` (UUID), no cuid default
+- Migrated `middleware.ts` → `proxy.ts` (Next 16 convention rename)
+
 ### Phase 0 — Bootstrap
 
 #### Added

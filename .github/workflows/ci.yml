@@ -45,3 +45,17 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+      - name: Production build
+        env:
+          # Build needs the same placeholder envs as Prisma generate.
+          # Real values are set in Vercel for the deploy environment.
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_placeholder
+          SUPABASE_SERVICE_ROLE_KEY: sb_secret_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+        run: pnpm build
