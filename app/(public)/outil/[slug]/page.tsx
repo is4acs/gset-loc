@@ -1,16 +1,17 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { getAllEquipmentSlugs, getEquipmentBySlug } from '@/lib/catalog/queries';
+import { getEquipmentBySlug } from '@/lib/catalog/queries';
 import { formatEurosFromCents } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type Params = Promise<{ slug: string }>;
 
-export async function generateStaticParams() {
-  const slugs = await getAllEquipmentSlugs();
-  return slugs.map((s) => ({ slug: s.slug }));
-}
+// Render on demand: keeps the build green even when the database isn't
+// reachable from the CI runner. Re-enable static generation later by
+// reintroducing generateStaticParams + revalidate when the build env has
+// access to a read replica.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { slug } = await params;
