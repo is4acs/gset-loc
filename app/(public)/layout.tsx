@@ -75,7 +75,18 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
         <div className="text-muted-foreground border-t py-4 text-center text-xs">
-          © {new Date().getFullYear()} GSET Guyane. Tous droits réservés.
+          © {new Date().getFullYear()} GSET Guyane.{' '}
+          <Link href="/mentions-legales" className="hover:text-primary">
+            Mentions légales
+          </Link>{' '}
+          ·{' '}
+          <Link href="/cgv" className="hover:text-primary">
+            CGV
+          </Link>{' '}
+          ·{' '}
+          <Link href="/confidentialite" className="hover:text-primary">
+            Confidentialité
+          </Link>
         </div>
       </footer>
     </div>

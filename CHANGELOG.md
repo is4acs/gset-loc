@@ -6,6 +6,66 @@ Le format est inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0
 
 ## [Unreleased]
 
+### Phase 6 — Deploy & legal placeholders
+
+#### Added
+
+- Pages légales placeholders (à finaliser avec un conseil juridique) :
+  - `/mentions-legales`, `/cgv`, `/confidentialite`
+- Footer public enrichi avec liens légaux
+- `vercel.json` (région `cdg1`, runtime nodejs, maxDuration 30s sur le webhook)
+- `/api/health` endpoint de liveness probe
+- README étendu : section déploiement Vercel + Supabase pas-à-pas
+
+### Phase 5 — Admin minimum
+
+#### Added
+
+- `/admin` (role `ADMIN` requis) — dashboard avec 4 KPIs (résa du jour, CA du mois, locations en cours, en attente), 8 dernières réservations, résumé flotte
+- `/admin/reservations` — tableau filtrable par statut (200 dernières)
+- `/admin/flotte` — table de tous les équipements avec toggle `isActive` (server action + revalidate /catalogue)
+- `requireAdmin` helper
+
+### Phase 4 minimum — Invoice PDF
+
+#### Added
+
+- Template PDF `lib/pdf/invoice.tsx` (@react-pdf/renderer, A4, charte GSET)
+- `lib/pdf/generate-invoice.ts` (render to Buffer)
+- `lib/storage/supabase-storage.ts` (upload via service-role)
+- `lib/booking/issue-invoice.ts` (idempotent, génère `F-{YYYY}-{NNNNN}`)
+- Webhook étendu : génération facture après confirmation
+- `/factures` — liste utilisateur avec lien PDF
+- Bucket Supabase Storage `invoices` à créer manuellement (Public)
+
+### Phase 3 — Réservation + paiement
+
+#### Added
+
+- `/reservation/nouvelle` (auth + KYC requis) — form complet avec récap tarifaire en temps réel
+- `/reservation/[reference]` — détails et statut
+- `/mes-locations` — liste des bookings
+- Disponibilité avec tampon 30 min, sélection auto d’unité disponible
+- Numérotation séquentielle `GSET-{YYYY}-{NNNNN}`
+- Pricing complet (HT + TVA Guyane + total + caution adaptative selon trustLevel)
+- Stripe Checkout (mode payment, locale fr, setup_future_usage off_session)
+- Webhook `checkout.session.completed` → empreinte CB en `capture_method=manual` + email confirmation
+- `lib/notifications/email.ts` + `booking-emails.ts` (Resend)
+- 9 tests unitaires supplémentaires (53 total)
+
+### Phase 2 — Catalogue public
+
+#### Added
+
+- Seed Prisma : 6 catégories + 13 équipements + 29 unités (idempotent)
+- `(public)` route group avec layout (header sticky + footer)
+- Landing revisitée : hero brandé, grille catégories, "Comment ça marche"
+- `/catalogue` avec filtres (catégorie, avec/sans opérateur) en query params
+- `/outil/[slug]` avec image (Next/Image), description, caractéristiques, tarifs HT — 13 pages préerendues via `generateStaticParams`
+- Helpers `lib/catalog/queries.ts` et `lib/format.ts`
+- SEO : `app/sitemap.ts`, `app/robots.ts`, metadata par page
+- `next.config.ts` : remotePatterns pour picsum.photos + Supabase Storage
+
 ### Phase 1 — Auth + KYC
 
 #### Added

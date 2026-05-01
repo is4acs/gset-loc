@@ -88,9 +88,47 @@ pnpm test:e2e
 - **Argent** : toujours en cents (Int), jamais en float.
 - **Server Actions** ou routes API protégées pour toute mutation.
 
+## Phases
+
+| Phase | Statut  | Description                                              |
+| ----- | ------- | -------------------------------------------------------- |
+| 0     | ✓       | Bootstrap (Next + Tailwind + Prisma + Supabase + Stripe) |
+| 1     | ✓       | Auth + KYC (Supabase + Stripe Identity)                  |
+| 2     | ✓       | Catalogue public (13 équipements + filtres + SEO)        |
+| 3     | ✓       | Réservation + paiement Stripe + empreinte CB             |
+| 4     | ✓ (min) | Facture PDF + email — état des lieux à venir             |
+| 5     | ✓ (min) | Admin dashboard + bookings + flotte                      |
+| 6     | ✓       | Pages légales + Vercel config + deploy                   |
+
+## Déploiement (Vercel + Supabase)
+
+1. **Pousser sur GitHub** — la branche `main` est suivie par Vercel.
+2. **Créer le projet Vercel** : https://vercel.com/new → Import depuis GitHub. Vercel détecte Next.js.
+3. **Variables d’environnement** (Vercel → Settings → Environment Variables) — copier celles de `.env.example` avec les valeurs prod :
+   - `DATABASE_URL` = Supabase **transaction pooler** (port 6543)
+   - `DIRECT_URL` = Supabase **session pooler** ou direct (port 5432)
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+   - `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
+   - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
+   - `NEXT_PUBLIC_APP_URL` = `https://votre-domaine.fr`
+4. **Configurer le webhook Stripe prod** : Stripe Dashboard → Developers → Webhooks → Add endpoint
+   - URL : `https://votre-domaine.fr/api/webhooks/stripe`
+   - Events : `checkout.session.completed`, `checkout.session.expired`, `payment_intent.payment_failed`, `identity.verification_session.verified`, `identity.verification_session.requires_input`, `identity.verification_session.canceled`
+   - Copier le `whsec_...` dans `STRIPE_WEBHOOK_SECRET` côté Vercel
+5. **Configurer Supabase** :
+   - Bucket Storage `invoices` à créer (Public bucket activé)
+   - Authentication → URL Configuration → Redirect URLs : ajouter `https://votre-domaine.fr/auth/confirm`
+   - Authentication → Email Templates : adapter en français
+6. **Promouvoir un user en ADMIN** (depuis Supabase Studio → SQL Editor) :
+   ```sql
+   UPDATE "User" SET role = 'ADMIN' WHERE email = 'admin@gset.fr';
+   ```
+
+Le déploiement est ensuite automatique : chaque push sur `main` déclenche une nouvelle build Vercel.
+
 ## Phase courante
 
-**Phase 0 — Bootstrap** ✓ — voir [`CHANGELOG.md`](./CHANGELOG.md) pour l’historique.
+Toutes les phases V1 sont implémentées. Voir [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Licence
 
