@@ -1,0 +1,275 @@
+// GSET Location — Prisma schema
+// Source of truth for the domain model. See CLAUDE.md for business rules.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================================
+// USERS & KYC
+// =====================================================================
+
+model User {
+  id                String          @id @default(cuid())
+  email             String          @unique
+  phone             String?
+  firstName         String?
+  lastName          String?
+  role              UserRole        @default(CUSTOMER)
+  customerType      CustomerType    @default(INDIVIDUAL)
+  companyName       String?
+  siret             String?
+  trustLevel        TrustLevel      @default(STANDARD)
+  completedBookings Int             @default(0)
+  kycStatus         KYCStatus       @default(NOT_STARTED)
+  kycVerifiedAt     DateTime?
+  stripeCustomerId  String?         @unique
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  bookings          Booking[]       @relation("BookingCustomer")
+  operatedBookings  Booking[]       @relation("BookingOperator")
+  paymentMethods    PaymentMethod[]
+
+  @@index([role])
+  @@index([trustLevel])
+  @@index([kycStatus])
+}
+
+enum UserRole {
+  CUSTOMER
+  OPERATOR
+  ADMIN
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  PRO
+}
+
+enum TrustLevel {
+  STANDARD
+  CONFIRMED
+  PREMIUM
+}
+
+enum KYCStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// =====================================================================
+// CATALOGUE
+// =====================================================================
+
+model EquipmentCategory {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  icon        String?
+  order       Int         @default(0)
+  equipments  Equipment[]
+}
+
+model Equipment {
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  description      String
+  shortDesc        String
+  categoryId       String
+  category         EquipmentCategory @relation(fields: [categoryId], references: [id])
+
+  // Type
+  requiresOperator Boolean           @default(false)
+  requiresCaces    String? // e.g., "R482-A", "R486-B"
+
+  // Pricing in cents EUR (HT, VAT applied at booking)
+  hourlyRate       Int
+  halfDayRate      Int
+  dayRate          Int
+
+  // Deposit in cents EUR (0 if requiresOperator=true)
+  baseDeposit      Int               @default(0)
+
+  // Metadata
+  specs            Json? // { puissance, poids, dimensions, ... }
+  images           String[] // Supabase Storage URLs
+
+  isActive         Boolean           @default(true)
+  units            EquipmentUnit[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+model EquipmentUnit {
+  id            String        @id @default(cuid())
+  equipmentId   String
+  equipment     Equipment     @relation(fields: [equipmentId], references: [id])
+  serialNumber  String        @unique
+  internalCode  String        @unique // e.g., "MP-001"
+
+  // Tracking
+  hasGpsTracker Boolean       @default(false)
+  trackerId     String? // GPS provider identifier
+
+  status        UnitStatus    @default(AVAILABLE)
+  notes         String?
+
+  bookingItems  BookingItem[]
+  inspections   Inspection[]
+
+  @@index([equipmentId])
+  @@index([status])
+}
+
+enum UnitStatus {
+  AVAILABLE
+  BOOKED
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+// =====================================================================
+// BOOKINGS
+// =====================================================================
+
+model Booking {
+  id                  String        @id @default(cuid())
+  reference           String        @unique // e.g., "GSET-2026-00042"
+  userId              String
+  user                User          @relation("BookingCustomer", fields: [userId], references: [id])
+
+  startAt             DateTime
+  endAt               DateTime
+  slotType            SlotType
+
+  status              BookingStatus @default(PENDING_PAYMENT)
+
+  // Pricing snapshot at booking time (cents EUR)
+  rentalAmount        Int
+  operatorAmount      Int           @default(0)
+  insuranceAmount     Int           @default(0)
+  deliveryAmount      Int           @default(0)
+  vatAmount           Int           @default(0)
+  totalAmount         Int
+  depositAmount       Int           @default(0)
+
+  // Stripe
+  paymentIntentId     String?       @unique
+  depositAuthId       String?       @unique // PaymentIntent in capture_method=manual
+
+  // Operator (when equipment.requiresOperator)
+  operatorUserId      String?
+  operator            User?         @relation("BookingOperator", fields: [operatorUserId], references: [id])
+
+  // Intervention or delivery address
+  interventionAddress String?
+
+  items               BookingItem[]
+  inspections         Inspection[]
+  invoice             Invoice?
+
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  cancelledAt         DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([startAt, endAt])
+}
+
+enum SlotType {
+  HOUR_1
+  HOUR_2
+  HALF_DAY
+  DAY
+  MULTI_DAY
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  IN_PROGRESS
+  RETURNED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model BookingItem {
+  id              String        @id @default(cuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  equipmentUnitId String
+  equipmentUnit   EquipmentUnit @relation(fields: [equipmentUnitId], references: [id])
+  unitPrice       Int
+
+  @@index([bookingId])
+  @@index([equipmentUnitId])
+}
+
+model Inspection {
+  id               String         @id @default(cuid())
+  bookingId        String
+  booking          Booking        @relation(fields: [bookingId], references: [id])
+  equipmentUnitId  String
+  equipmentUnit    EquipmentUnit  @relation(fields: [equipmentUnitId], references: [id])
+  type             InspectionType
+  photos           String[] // Supabase Storage URLs
+  videoUrl         String?
+  notes            String?
+  hasIssue         Boolean        @default(false)
+  issueDescription String?
+  damageAmount     Int? // cents EUR if deposit captured
+  signedByUserAt   DateTime?
+  signedByStaffAt  DateTime?
+  createdAt        DateTime       @default(now())
+
+  @@index([bookingId])
+  @@index([equipmentUnitId])
+}
+
+enum InspectionType {
+  CHECKOUT
+  RETURN
+}
+
+// =====================================================================
+// BILLING
+// =====================================================================
+
+model Invoice {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  number    String   @unique // e.g., "F-2026-00042"
+  pdfUrl    String?
+  amount    Int // total amount including VAT (cents)
+  vatAmount Int // VAT amount in cents (8.5% Guyane)
+  issuedAt  DateTime @default(now())
+}
+
+model PaymentMethod {
+  id                    String  @id @default(cuid())
+  userId                String
+  user                  User    @relation(fields: [userId], references: [id])
+  stripePaymentMethodId String  @unique
+  brand                 String // visa, mastercard, ...
+  last4                 String
+  expMonth              Int
+  expYear               Int
+  isDefault             Boolean @default(false)
+
+  @@index([userId])
+}

@@ -1,0 +1,11 @@
+node_modules
+.next
+.vercel
+out
+build
+coverage
+public
+pnpm-lock.yaml
+lib/generated
+*.tsbuildinfo
+next-env.d.ts
