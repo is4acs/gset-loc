@@ -7,6 +7,9 @@ export const metadata = {
     'Marteau piqueur, scie à sol, mini-pelle… Réservez en 2 minutes du matériel BTP à l’heure ou à la journée en Guyane. Caution gérée par empreinte CB Stripe.',
 };
 
+// Render on demand so the build doesn't need a database connection.
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const categories = await listCategories();
 
