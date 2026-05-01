@@ -3,6 +3,7 @@ import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe/server';
 import { db } from '@/lib/db';
 import { bookingConfirmationEmail } from '@/lib/notifications/booking-emails';
+import { issueInvoiceForBooking } from '@/lib/booking/issue-invoice';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -161,6 +162,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       depositAuthId,
     },
   });
+
+  // Generate the invoice (best-effort; upload to Supabase Storage may fail
+  // silently if the bucket isn't created yet — the row is still inserted).
+  try {
+    await issueInvoiceForBooking(booking.id);
+  } catch (e) {
+    console.error('[stripe-webhook] invoice issuance failed:', (e as Error).message);
+  }
 
   const equipment = booking.items[0]?.equipmentUnit.equipment;
   if (equipment) {

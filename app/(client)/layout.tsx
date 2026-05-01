@@ -11,11 +11,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             GSET Location
           </Link>
           <nav className="flex items-center gap-6 text-sm">
-            <Link href="/profil" className="hover:text-primary">
-              Profil
+            <Link href="/catalogue" className="hover:text-primary">
+              Catalogue
             </Link>
             <Link href="/mes-locations" className="hover:text-primary">
               Mes locations
+            </Link>
+            <Link href="/factures" className="hover:text-primary">
+              Factures
+            </Link>
+            <Link href="/profil" className="hover:text-primary">
+              Profil
             </Link>
             <form action={logoutAction}>
               <Button type="submit" variant="ghost" size="sm">
